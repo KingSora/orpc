@@ -2,20 +2,20 @@ import type { StandardHeaders } from '@standardserver/core'
 import type { OpenAPISerializer } from '../openapi-serializer'
 import { isTypescriptObject } from '@standardserver/shared'
 
+function appendHeadersValue(headers: StandardHeaders, key: string, value: string | string[] | undefined) {
+  if (headers[key]) {
+    headers[key] = [headers[key], value].flat()
+  }
+  else {
+    headers[key] = value
+  }
+}
+
 export function serializeHeaders(data: unknown, serializer: Pick<OpenAPISerializer, keyof OpenAPISerializer>): StandardHeaders {
   const headers: StandardHeaders = {}
 
   if (!isTypescriptObject(data)) {
     return headers
-  }
-
-  const appendHeadersValue = (key: string, value: string | string[] | undefined) => {
-    if (headers[key]) {
-      headers[key] = [headers[key], value].flat()
-    }
-    else {
-      headers[key] = value
-    }
   }
 
   Object.entries(data).forEach(([key, value]) => {
@@ -25,7 +25,7 @@ export function serializeHeaders(data: unknown, serializer: Pick<OpenAPISerializ
         .filter(val => val !== undefined && val !== null)
         .map(val => String(val))
 
-      appendHeadersValue(key, serializedArray)
+      appendHeadersValue(headers, key, serializedArray)
     }
     else if (isTypescriptObject(value)) {
       const serializedObject = Object.entries(value)
@@ -33,12 +33,12 @@ export function serializeHeaders(data: unknown, serializer: Pick<OpenAPISerializ
         .filter(([, val]) => val !== undefined && val !== null)
         .map(([key, val]) => [String(key), String(val)])
 
-      serializedObject.forEach(val => appendHeadersValue(key, val))
+      serializedObject.forEach(val => appendHeadersValue(headers, key, val))
     }
     else {
       const serialized = serializer.serialize(value)
       if (serialized !== undefined && serialized !== null) {
-        appendHeadersValue(key, String(serialized))
+        appendHeadersValue(headers, key, String(serialized))
       }
     }
   })
