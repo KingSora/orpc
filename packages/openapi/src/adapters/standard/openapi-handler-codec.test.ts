@@ -692,8 +692,14 @@ describe('openAPIHandlerCodec', () => {
       })
 
       it('uses explicit status and headers from output', () => {
+        const body = { ok: true }
         const serializer = {
-          serialize: vi.fn().mockReturnValueOnce('__serialized_body__'),
+          serialize: vi.fn().mockImplementation((data) => {
+            if (data === body) {
+              return '__serialized_body__'
+            }
+            return data
+          }),
           deserialize: vi.fn(),
         } as any
 
@@ -703,7 +709,7 @@ describe('openAPIHandlerCodec', () => {
         const response = codec.encodeOutput({
           status: 202,
           headers: { 'x-custom': 'value' },
-          body: { ok: true },
+          body,
         }, procedure, [])
 
         expect(response).toEqual({
@@ -717,7 +723,7 @@ describe('openAPIHandlerCodec', () => {
         ['non-object output', '__invalid__'],
         ['status outside the allowed range', { status: 500 }],
         ['extra keys', { body: 'ok', extra: true }],
-        ['invalid headers', { headers: { 'x-invalid': 123 } }],
+        ['invalid headers', { headers: 'x-invalid' }],
       ])('throws for invalid output: %s', (_, output) => {
         const procedure = os.meta(openapi({ outputStructure: 'detailed' })).handler(vi.fn())
         const codec = new OpenAPIHandlerCodec(procedure)

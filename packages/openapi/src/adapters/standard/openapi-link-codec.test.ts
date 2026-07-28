@@ -540,6 +540,57 @@ describe('openAPILinkCodec', () => {
       })
     })
 
+    describe('headers serialization', () => {
+      it('serializes raw headers into correct standard headers', async () => {
+        const codec = new OpenAPILinkCodec({
+          headers: oc.meta(openapi({
+            method: 'GET',
+            inputStructure: 'detailed',
+          })),
+        }, { url: '/api', serializer })
+
+        const request = await codec.encodeInput({
+          headers: {
+            'x-version': 2,
+            'x-array': [1, '2', false],
+            'x-obj': { a: 1, b: 'test', field: true },
+            'x-null': null,
+            'x-undefined': undefined,
+          },
+        }, ['headers'], { context: {} })
+
+        expect(request.headers['x-version']).toEqual('2')
+        expect(request.headers['x-array']).toEqual(['1', '2', 'false'])
+        expect(request.headers['x-obj']).toEqual([
+          'a',
+          '1',
+          'b',
+          'test',
+          'field',
+          'true',
+        ])
+        expect('x-null' in request.headers).toBe(false)
+        expect('x-undefined' in request.headers).toBe(false)
+      })
+
+      it('handles present headers correctly', async () => {
+        const codec = new OpenAPILinkCodec({
+          headers: oc.meta(openapi({
+            method: 'GET',
+            inputStructure: 'detailed',
+          })),
+        }, { url: '/api', headers: { 'x-version': '1' }, serializer })
+
+        const request = await codec.encodeInput({
+          headers: {
+            'x-version': 2,
+          },
+        }, ['headers'], { context: {} })
+
+        expect(request.headers['x-version']).toEqual(['1', '2'])
+      })
+    })
+
     describe('option handling', () => {
       it('accepts Headers instances for base headers', async () => {
         const codec = new OpenAPILinkCodec({

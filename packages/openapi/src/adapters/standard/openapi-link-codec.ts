@@ -8,13 +8,14 @@ import { createORPCErrorFromJson, isORPCErrorJson, ORPCError } from '@orpc/clien
 import { getRouterContract, ProcedureContract } from '@orpc/contract'
 import { unlazy } from '@orpc/server'
 import { isTypescriptObject, mergeHttpPath, pathToHttpPath, stringifyJSON, value } from '@orpc/shared'
-import { isStandardHeaders, mergeStandardHeaders, parseStandardUrl } from '@standardserver/core'
+import { mergeStandardHeaders, parseStandardUrl } from '@standardserver/core'
 import { toStandardHeaders } from '@standardserver/fetch'
 import {
   DEFAULT_OPENAPI_INPUT_STRUCTURE,
   DEFAULT_OPENAPI_METHOD,
   DEFAULT_OPENAPI_OUTPUT_STRUCTURE,
 } from '../../constants'
+import { serializeHeaders } from '../../helpers/serialize-headers'
 import { getOpenAPIMeta } from '../../meta'
 import { OpenAPISerializer } from '../../openapi-serializer'
 import { getDynamicPathParams, isBodylessMethod } from '../../utils'
@@ -143,7 +144,7 @@ export class OpenAPILinkCodec<T extends ClientContext> implements StandardLinkCo
         • Expected an object or undefined with optional properties:
           - params (object, required when the path has dynamic params)
           - query (object)
-          - headers (Record<string, string | string[] | undefined>)
+          - headers (object)
           - body (any)
 
         Actual value:
@@ -167,7 +168,7 @@ export class OpenAPILinkCodec<T extends ClientContext> implements StandardLinkCo
     }
 
     if (input?.headers) {
-      headers = mergeStandardHeaders(headers, input.headers)
+      headers = mergeStandardHeaders(headers, serializeHeaders(input.headers, this.serializer))
     }
 
     pathname = `${basePathname.replace(END_SLASH_REGEX, '')}${pathname}` as `/${string}`
@@ -484,7 +485,7 @@ function isValidDetailedInput(
     return false
   }
 
-  if (input.headers !== undefined && !isStandardHeaders(input.headers)) {
+  if (input.headers !== undefined && !isTypescriptObject(input.headers)) {
     return false
   }
 
